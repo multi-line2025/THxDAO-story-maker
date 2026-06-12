@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ふね — あるノードの自伝</title>
+<style>
+  :root{
+    --ground:#0E1216; --ground-2:#131A20; --ground-3:#1A222B;
+    --ivory:#ECE4D6; --ivory-dim:#9AA0A0;
+    --cyan:#3FD0E0; --amber:#E0A33F; --vermilion:#D8503A; --violet:#8A6FB0;
+    --shadow:#6B6F73;
+    --hair:rgba(236,228,214,0.12); --hair-2:rgba(236,228,214,0.05);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--ground);color:var(--ivory);
+    font-family:"Hiragino Mincho ProN","Yu Mincho","Noto Serif JP",serif;
+    -webkit-font-smoothing:antialiased;}
+  .sans{font-family:"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;}
+  .mono{font-family:"SF Mono","JetBrains Mono",ui-monospace,Menlo,monospace;}
+
+  header{position:sticky;top:0;z-index:30;display:flex;align-items:center;gap:14px;
+    padding:9px 16px;background:rgba(14,18,22,0.9);backdrop-filter:blur(10px);
+    border-bottom:1px solid var(--hair);flex-wrap:wrap;}
+  header .brand{color:var(--amber);font-weight:700;font-family:"SF Mono",monospace;font-size:13.5px;}
+  header .sub{color:var(--ivory-dim);font-size:11px;font-family:"SF Mono",monospace;}
+  #clock{margin-left:auto;font-family:"SF Mono",monospace;font-size:13px;color:var(--amber);}
+  .ctrl{display:flex;gap:6px;align-items:center;}
+  button{background:var(--ground-3);color:var(--ivory);border:1px solid var(--hair);
+    font-family:"SF Mono",monospace;font-size:12px;padding:6px 11px;cursor:pointer;border-radius:3px;transition:all .15s;}
+  button:hover{border-color:var(--amber);color:var(--amber);}
+  button.on{border-color:var(--amber);color:var(--amber);background:rgba(224,163,63,0.08);}
+
+  main{display:flex;align-items:stretch;min-height:calc(100vh - 48px);}
+  #book{flex:1;min-width:0;padding:36px 44px 80px;max-width:760px;margin:0 auto;}
+
+  #identity{font-size:clamp(20px,3vw,27px);line-height:1.6;font-weight:600;margin:6px 0 8px;letter-spacing:0.02em;}
+  #identity .era-label{display:block;font-family:"SF Mono",monospace;font-size:10px;color:var(--ivory-dim);
+    letter-spacing:0.2em;margin-bottom:10px;font-weight:400;}
+  #subtitle{font-size:12px;color:var(--ivory-dim);font-family:"SF Mono",monospace;margin-bottom:30px;}
+
+  .chapter{margin:30px 0 0;}
+  .ch-head{font-family:"SF Mono",monospace;font-size:10.5px;color:var(--cyan);letter-spacing:0.18em;margin-bottom:10px;}
+  .ch-head .vuln{color:var(--vermilion);margin-left:10px;letter-spacing:0.05em;}
+  .sent{font-size:15.5px;line-height:2.05;transition:opacity 1.2s ease,color 1.2s;}
+  .sent .auth{font-size:11px;color:var(--ivory-dim);font-family:"SF Mono",monospace;margin-left:6px;}
+  .sent.justcited{color:var(--amber);}
+  .sent .mut{color:var(--vermilion);}
+  .bridge{font-size:13.5px;color:var(--violet);opacity:0.85;line-height:2;margin:14px 0;}
+  .nochapter{color:var(--ivory-dim);font-size:13px;opacity:0.7;}
+
+  #eras{margin-top:54px;border-top:1px solid var(--hair);padding-top:18px;}
+  #eras .et{font-family:"SF Mono",monospace;font-size:10px;color:var(--ivory-dim);letter-spacing:0.2em;margin-bottom:12px;}
+  .era-item{font-size:12.5px;line-height:1.9;color:var(--ivory-dim);}
+  .era-item b{color:var(--ivory);font-weight:500;}
+  .era-item .y{font-family:"SF Mono",monospace;font-size:10.5px;color:var(--amber);margin-right:10px;}
+
+  aside{width:400px;flex-shrink:0;border-left:1px solid var(--hair);display:flex;flex-direction:column;
+    max-height:calc(100vh - 48px);position:sticky;top:48px;
+    font-family:"Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;}
+  .asec{padding:12px 14px;display:flex;flex-direction:column;min-height:0;}
+  .asec h3{margin:0 0 10px;font-size:11.5px;font-family:"SF Mono",monospace;letter-spacing:0.08em;color:var(--ivory-dim);font-weight:500;}
+  .asec h3 b{color:var(--violet);font-weight:600;}
+
+  #cast{display:flex;flex-wrap:wrap;gap:6px;}
+  .person{font-size:11px;padding:3px 9px;border:1px solid var(--hair);border-radius:20px;color:var(--ivory-dim);
+    font-family:"SF Mono","Hiragino Kaku Gothic ProN",monospace;transition:all .8s;}
+  .person.here{color:var(--ivory);border-color:rgba(63,208,224,0.45);}
+  .person.gone{opacity:0.4;}
+  .person.dead{opacity:0.55;border-style:dashed;}
+
+  #cands{overflow-y:auto;max-height:30vh;display:flex;flex-direction:column;gap:8px;}
+  #cands .empty{font-size:11.5px;color:var(--ivory-dim);opacity:0.6;font-family:"SF Mono",monospace;}
+  .icard{border:1px solid var(--hair);border-left:3px solid var(--violet);padding:9px 12px;background:var(--ground-2);animation:pop .4s ease;}
+  @keyframes pop{from{transform:translateY(-6px);opacity:0;}to{transform:none;opacity:1;}}
+  .icard.verm{border-left-color:var(--vermilion);}
+  .icard.amber{border-left-color:var(--amber);}
+  .icard .itype{font-family:"SF Mono",monospace;font-size:10px;color:var(--violet);}
+  .icard.verm .itype{color:var(--vermilion);} .icard.amber .itype{color:var(--amber);}
+  .icard .itime{float:right;font-family:"SF Mono",monospace;font-size:9.5px;color:var(--ivory-dim);}
+  .icard .ibody{font-size:12px;margin-top:4px;line-height:1.7;}
+
+  .logwrap{flex:1;border-top:1px solid var(--hair);}
+  #log{overflow-y:auto;flex:1;font-size:11.5px;display:flex;flex-direction:column;gap:2px;min-height:140px;}
+  .ev{display:flex;gap:8px;padding:4px 2px;border-bottom:1px solid var(--hair-2);align-items:baseline;animation:pop .3s ease;}
+  .ev .t{font-family:"SF Mono",monospace;font-size:9px;color:var(--ivory-dim);min-width:58px;flex-shrink:0;}
+  .ev .lyr{font-family:"SF Mono",monospace;font-size:9.5px;min-width:24px;flex-shrink:0;font-weight:600;}
+  .ev .lyr.l1{color:var(--cyan);} .ev .lyr.l2{color:var(--amber);}
+  .ev .lyr.l3{color:var(--vermilion);} .ev .lyr.l4{color:var(--violet);}
+  .ev .lyr.l0{color:var(--shadow);}
+  .ev .x{opacity:0.85;line-height:1.65;}
+  .ev.issue .x{color:var(--violet);opacity:1;}
+  .ev.warn .x{color:var(--vermilion);opacity:0.95;}
+  .ev.note .x{color:var(--amber);opacity:0.95;}
+  .ev.melt .x{color:var(--shadow);opacity:1;}
+  .ev .x s{color:var(--shadow);}
+  .ev .x b{color:var(--ivory);font-weight:600;}
+
+  #intro{position:fixed;inset:0;z-index:100;background:rgba(14,18,22,0.95);backdrop-filter:blur(6px);
+    display:flex;align-items:center;justify-content:center;padding:24px;}
+  #intro .box{max-width:640px;border:1px solid var(--hair);padding:34px 38px;background:var(--ground-2);}
+  #intro h1{font-size:26px;margin:0 0 6px;font-weight:600;}
+  #intro h1 span{color:var(--amber);}
+  #intro .ey{font-family:"SF Mono",monospace;font-size:11px;letter-spacing:0.2em;color:var(--ivory-dim);margin-bottom:18px;}
+  #intro p{font-size:13.5px;opacity:0.88;margin:0 0 12px;line-height:2;}
+  #intro .watch{border:1px dashed var(--amber);padding:12px 16px;font-size:12.5px;margin:16px 0 22px;line-height:1.9;
+    font-family:"Hiragino Kaku Gothic ProN",sans-serif;}
+  #intro .watch b{color:var(--amber);font-weight:600;}
+  #intro button{font-size:14px;padding:10px 26px;border-color:var(--amber);color:var(--amber);}
+  #intro .note{font-family:"SF Mono",monospace;font-size:10.5px;color:var(--ivory-dim);margin-top:14px;}
+
+  @media(max-width:980px){
+    main{flex-direction:column;}
+    aside{width:100%;max-height:none;position:static;border-left:none;border-top:1px solid var(--hair);}
+    #log{max-height:38vh;}
+    #book{padding:28px 22px 60px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="brand">ふね</span>
+  <span class="sub">あるノードの自伝 ── 添状と引用だけで書かれた物語</span>
+  <span id="clock" class="mono">1年目 春</span>
+  <div class="ctrl">
+    <button id="btnPause">⏸</button>
+    <button class="spd on" data-s="1">×1</button>
+    <button class="spd" data-s="4">×4</button>
+    <button class="spd" data-s="16">×16</button>
+    <button id="btnNight">☽ 別の店</button>
+  </div>
+</header>
+
+<main>
+  <div id="book">
+    <div id="identity"><span class="era-label">この場所がいま、何であるか(最も強い章が決める)</span><span id="idline">ここは、まだ何でもない場所である。</span></div>
+    <div id="subtitle">文の濃さ = 引用が買った持続。薄れていく文は、忘れられていく文。</div>
+    <div id="chapters"><div class="nochapter">まだ語りはない。最初の客を待っている。</div></div>
+    <div id="eras" style="display:none;">
+      <div class="et">年代記 ── この場所が、かつて何であったか</div>
+      <div id="eralist"></div>
+    </div>
+  </div>
+  <aside>
+    <div class="asec">
+      <h3>来る人々</h3>
+      <div id="cast"></div>
+    </div>
+    <div class="asec">
+      <h3><b>物語の段差</b> ── 語りが見落としているもの</h3>
+      <div id="cands"><div class="empty">まだ何も。物語が育つのを待つ…</div></div>
+    </div>
+    <div class="asec logwrap">
+      <h3>観測ノート</h3>
+      <div id="log"></div>
+    </div>
+  </aside>
+</main>
+
+<div id="intro">
+  <div class="box">
+    <div class="ey">SIMULATION ── 文脈という断面</div>
+    <h1>ふね <span>— あるノードの自伝</span></h1>
+    <p>港町の路地に、夜どおしやっている小さな食堂がある。この店に「本質」はない。あるのは、客が感謝に添えて置いていく一言(添状)と、誰かがその言葉をまた口にすること(引用)だけだ。引用された言葉は生き残り、されなかった言葉は薄れて融ける。生き残った言葉が束になって章をなし、章が集まって——この店が「何であるか」が、誰の決定もなく書き上がっていく。</p>
+    <div class="watch">見どころ: <b>言葉は引用のたびに少しずつ変わる</b>(「残業帰りに灯りがついていた」が、十年後には何になっているか)。<b>語られない章</b>——言葉は流れているのに、物語に乗らないもの。文が目の前で薄れて<b>融ける</b>瞬間。年に一度の<b>大鍋の日</b>だけで生き延びる記憶。そして人がいなくなったあと、その人の言葉に起きること。</div>
+    <p style="font-size:12px;color:var(--ivory-dim);">約45秒で1年。15年ほど眺めると、ひとつの自伝が読める。×16で一気に飛ばして、出来上がった物語と年代記だけ読むのもいい。</p>
+    <button id="btnStart">▶ 開店する</button>
+    <div class="note">L1=添状の発火 ／ L2=引用と変異(伝言ゲームの正典化) ／ L3=章の全か無か ／ L4=流れと語りの段差</div>
+  </div>
+</div>
+
+<script>
+/*SIM-CORE-START*/
+let onEvent=null,onCompose=null,onCast=null,onCand=null,onEra=null;
+
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+let R=Math.random;
+function pick(arr){return arr[Math.floor(R()*arr.length)];}
+
+// ===== 語彙 =====
+// 変異チェーン: 引用のたび、まれに右へ滑る(誇張)か、揺らぐ。伝言ゲームの正典化。
+const CH={
+  time:['残業帰りに','終電を逃した夜に','夜どおし','一晩中','何年ものあいだ'],
+  enough:['それだけで充分だった','それだけで助かった','それで泣きそうになった','それがすべてだった'],
+  dish:['しょうが粥','大根の煮たの','卵雑炊','残り物の鍋','名前のない汁'],
+  memory:['死んだ母の味','田舎の朝の味','誰かの台所の味','もう帰れない場所の味'],
+  ask:['名前を訊かれ','理由を訊かれ','事情を訊かれ','過去を訊かれ'],
+  people:['ひとりだけ','何人かが','みんなが','この町の誰もが'],
+  pay:['ツケにしてくれた','黙って値段を間違えてくれた','お代は要らないと言った','金の話を一度もしなかった'],
+  season:['冬の','梅雨の','盆過ぎの','年の瀬の'],
+  silent:['誰も見ていなかった','礼を言う者はいなかった','本人は何も言わなかった','名前を知る者さえ少なかった'],
+  cry:['泣いていい場所だった','黙っていていい場所だった','嘘をついていい場所だった','帰らなくていい場所だった'],
+  ret:['十年ぶりに','ふらりと','喪服のまま','子どもを連れて'],
+  nabe:['鍋がひとつになった','同じ鍋から食った','箸が足りなくなった','誰の椀でもなくなった'],
+  dead:['いない人の話をした','遺影のない通夜だった','名前を呼ぶと、少し静かになった','その席だけ空けてあった'],
+};
+// 添状のテンプレート(テーマ別)。t=tokens
+const THEMES=[
+ {id:'akari',label:'灯り',idline:'ここは、夜じゅう灯りのついている場所である。',
+  tpl:[
+   t=>`${t.time}、灯りがついていた。${t.enough}。`,
+   t=>`${t.season}晩、ほかに開いている店はなかった。`,
+   t=>`灯りを目印に歩いた。${t.enough}。`,
+  ],slots:[['time','enough'],['season'],['enough']]},
+ {id:'aji',label:'味',idline:'ここは、安く腹を満たす場所である。',
+  tpl:[
+   t=>`${t.dish}が、${t.memory}に似ていた。`,
+   t=>`うまいかと訊かれれば困る。だが${t.dish}は、箸が止まらなかった。`,
+   t=>`${t.season}夜は${t.dish}に限る、と教わった。`,
+  ],slots:[['dish','memory'],['dish'],['season','dish']]},
+ {id:'ibasho',label:'居場所',idline:'ここは、名前を訊かれない場所である。',
+  tpl:[
+   t=>`誰にも${t.ask}なかった。${t.enough}。`,
+   t=>`ここは${t.cry}。`,
+   t=>`隅の席で、${t.time}座っていられた。`,
+  ],slots:[['ask','enough'],['cry'],['time']]},
+ {id:'kane',label:'金',idline:'ここは、財布を見ないで戸を開けられる場所である。',
+  tpl:[
+   t=>`給料日前、${t.pay}。`,
+   t=>`${t.people}、ここのツケで冬を越した。`,
+  ],slots:[['pay'],['people']]},
+ {id:'sara',label:'皿洗い',idline:'ここは、誰かが黙って皿を洗っている場所である。',
+  tpl:[
+   t=>`いちばん最後まで残って皿を洗う人がいた。${t.silent}。`,
+   t=>`水音だけが、店じまいの合図だった。${t.silent}。`,
+  ],slots:[['silent'],['silent']]},
+ {id:'matsuri',label:'大鍋の日',idline:'ここは、年に一度、鍋がひとつになる場所である。',
+  tpl:[
+   t=>`年の瀬の大鍋の日、${t.nabe}。`,
+   t=>`あの日だけは、${t.people}、${t.nabe}。`,
+  ],slots:[['nabe'],['people','nabe']]},
+ {id:'mitori',label:'いない人',idline:'ここは、いない人の話をしていい場所である。',
+  tpl:[
+   t=>`ここでだけ、${t.dead}。`,
+   t=>`${t.season}晩、${t.dead}。`,
+  ],slots:[['dead'],['season','dead']]},
+ {id:'wakare',label:'別れと帰還',idline:'ここは、出ていった者が帰ってくる場所である。',
+  tpl:[
+   t=>`${t.ret}戸を開けても、同じ席が空いていた。`,
+   t=>`出ていくとき、誰も引き止めなかった。${t.ret}戻ったとき、誰も驚かなかった。`,
+  ],slots:[['ret'],['ret']]},
+];
+const TH_BY_ID={};THEMES.forEach(th=>TH_BY_ID[th.id]=th);
+
+// ===== 登場人物 =====
+function makeCast(){
+  return [
+   {name:'源',     note:'老いた漁師',   come:0,    go:2555, die:2555, aff:['aji','kane','mitori'], talk:1.1, cite:1.0},
+   {name:'須藤',   note:'元教師',       come:0,    go:3300,           aff:['akari','ibasho','mitori'], talk:1.0, cite:1.3},
+   {name:'充',     note:'夜勤明け',     come:30,   go:1500, back:2920,aff:['akari','aji','wakare'], talk:1.0, cite:0.9},
+   {name:'リエン', note:'ハノイから来た',come:380,  go:99999,          aff:['aji','ibasho','matsuri'], talk:0.9, cite:1.1},
+   {name:'佳代',   note:'',             come:60,   go:1900,           aff:['ibasho'], talk:0.7, cite:0.6},
+   {name:'杏',     note:'高校生',       come:760,  go:1850, back:3650, sporadic:true, aff:['aji','wakare'], talk:0.8, cite:0.8},
+   {name:'盛田',   note:'タクシー運転手',come:0,   go:99999,          aff:['kane','akari','matsuri'], talk:1.0, cite:1.0},
+   {name:'早苗',   note:'看護師',       come:1100, go:99999,          aff:['mitori','ibasho'], talk:0.9, cite:1.2},
+   {name:'常',     note:'皿洗い',       come:0,    go:3680, die:3680, aff:[], talk:0, cite:0},
+   {name:'時雨',   note:'屋台の仲間',   come:200,  go:99999,          aff:['matsuri','aji'], talk:0.6, cite:0.9},
+  ];
+}
+
+// ===== 状態 =====
+const HMAX=10, H_HL=140, H_GAINK=0.6, H_GAPCAP=240;
+const TH_ON=11, TH_OFF=6.5;
+const MUT_P=0.07;
+let S=null;
+const YEAR=365;
+
+function reset(seed){
+  R=mulberry32(seed);
+  S={t:0,frags:[],cast:makeCast(),told:{},flow:{},bridges:[],cands:[],eras:[],
+     curIdTheme:null,idPending:null,flags:{},lastNabe:-9999,coCite:{},nextCompose:7};
+  THEMES.forEach(th=>{S.told[th.id]=false;S.flow[th.id]=0;});
+}
+function fmtT(t){
+  const y=Math.floor(t/YEAR)+1, d=t%YEAR;
+  const sz=d<90?'春':d<180?'夏':d<270?'秋':'冬';
+  return y+'年目 '+sz;
+}
+function logEv(layer,html,cls){if(onEvent)onEvent(S.t,layer,html,cls||'');}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+
+function present(c,t){
+  if(c.dead)return false;
+  if(t>=c.come&&t<c.go)return c.sporadic?(Math.floor(t/30)%5===0):true;
+  if(c.back&&t>=c.back)return c.sporadic?(Math.floor(t/30)%6===0):true;
+  return false;
+}
+
+// ===== L1: 添状の発火 =====
+function utter(c,t,forceTheme){
+  const thid=forceTheme||pick(c.aff.length?c.aff:['aji']);
+  const th=TH_BY_ID[thid];
+  const k=Math.floor(R()*th.tpl.length);
+  const tokens={};
+  th.slots[k].forEach(s=>{tokens[s]={ch:s,i:Math.floor(R()*Math.min(2,CH[s].length))};});
+  const f={id:S.frags.length,theme:thid,author:c.name,born:t,lastCite:t,H:1.0+R()*1.5,gen:0,
+           tplK:k,tokens,orig:null,deadF:false};
+  f.orig=renderFrag(f);
+  S.frags.push(f);
+  S.flow[thid]+=1;
+  if(S.flow[thid]<1.5||R()<0.16)
+    logEv(1,`${c.name}が添状を置いた——「<b>${esc(renderFrag(f))}</b>」`);
+  return f;
+}
+function renderFrag(f){
+  const th=TH_BY_ID[f.theme];
+  const t={};
+  for(const s in f.tokens){const tk=f.tokens[s];t[s]=CH[tk.ch][tk.i];}
+  return th.tpl[f.tplK](t);
+}
+
+// ===== L2: 引用と変異 =====
+function cite(c,f,t,quiet){
+  const gap=Math.max(t-f.lastCite,1);
+  f.H=Math.min(f.H+H_GAINK*Math.min(gap,H_GAPCAP)/30,HMAX);
+  f.lastCite=t;f.justCited=t;
+  // 変異: 伝言ゲーム
+  if(R()<MUT_P&&f.gen<6){
+    const keys=Object.keys(f.tokens);
+    if(keys.length){
+      const s=pick(keys),tk=f.tokens[s],chain=CH[tk.ch];
+      const oldW=chain[tk.i];
+      tk.i=(R()<0.85&&tk.i<chain.length-1)?tk.i+1:Math.floor(R()*chain.length);
+      const newW=chain[tk.i];
+      if(newW!==oldW){
+        f.gen++;
+        if(R()<0.35)logEv(2,`引用(${f.gen}代目): ${c.name}が${f.author}の言葉を口にした——ただし「<s>${esc(oldW)}</s>」は「<b>${esc(newW)}</b>」になっていた。誰も気づいていない`,'note');
+      }
+    }
+  } else if(!quiet&&R()<0.08){
+    logEv(2,`引用: ${c.name}が、${f.author}の「${esc(renderFrag(f)).slice(0,26)}…」をまた口にした(間隔${Math.round(gap)}日が持続を買う)`);
+  }
+  // 共引用 → 章の結線
+  if(S.lastCiteTheme&&S.lastCiteTheme.who===c.name&&t-S.lastCiteTheme.t<7&&S.lastCiteTheme.th!==f.theme){
+    const a=[S.lastCiteTheme.th,f.theme].sort().join('|');
+    S.coCite[a]=(S.coCite[a]||0)+1;
+    if(S.coCite[a]===4&&S.bridges.length<3){
+      const [x,y]=a.split('|');
+      S.bridges.push({a:x,b:y,born:t});
+      logEv(2,`結線: いつからか、${TH_BY_ID[x].label}の話は、${TH_BY_ID[y].label}の話と同じ声で語られるようになった`,'note');
+    }
+  }
+  S.lastCiteTheme={who:c.name,th:f.theme,t};
+}
+
+// ===== メインループ =====
+function step(dt){
+  const t=S.t+=dt;
+  const day=Math.floor(t);
+
+  // --- 人の出入りイベント ---
+  S.cast.forEach(c=>{
+    if(!c.arrLogged&&t>=c.come){c.arrLogged=true;
+      if(c.come>10)logEv(1,`${c.name}${c.note?'('+c.note+')':''}が、初めて戸を開けた`);}
+    if(!c.goLogged&&t>=c.go&&!c.die){c.goLogged=true;
+      logEv(0,`${c.name}が来なくなった。理由は誰も知らない`,'melt');}
+    if(c.die&&!c.dead&&t>=c.die){c.dead=true;
+      logEv(0,`${c.name}が死んだ。${c.note?c.note+'だった。':''}通夜のあと、何人かがこの店に寄った`,'warn');
+      // 弔いの引用バースト
+      const theirs=S.frags.filter(f=>!f.deadF&&f.author===c.name);
+      const others=S.cast.filter(o=>present(o,t)&&o.cite>0);
+      theirs.forEach(f=>{if(others.length&&R()<0.9)cite(pick(others),f,t,true);});
+      if(theirs.length)logEv(2,`通夜の晩、${c.name}の言葉がいくつも引用された。死者は、引用のなかでだけ年を取らない`,'note');
+      // 「いない人」章への転化
+      const mourners=others.filter(o=>o.aff.includes('mitori'));
+      (mourners.length?mourners:others).slice(0,2).forEach(o=>utter(o,t,'mitori'));
+      if(c.name==='常'){
+        const others2=S.cast.filter(o=>present(o,t)&&o.cite>0);
+        for(let i=0;i<4;i++)if(others2.length)utter(pick(others2),t,'sara');
+        S.frags.filter(f=>!f.deadF&&f.theme==='sara').forEach(f=>{
+          if(others2.length)cite(pick(others2),f,t,true);});
+        S.flags.tsuneDead=true;
+      }
+    }
+    if(c.back&&!c.backLogged&&t>=c.back){c.backLogged=true;
+      logEv(1,`${c.name}が${Math.round((c.back-c.go)/YEAR)}年ぶりに戸を開けた`,'note');
+      const own=S.frags.filter(f=>!f.deadF&&f.author===c.name);
+      if(own.length){
+        const f=pick(own);cite(c,f,t,true);
+        if(f.gen>0)logEv(2,`${c.name}は自分の言葉を引用した。ただしそれは、もう自分の言ったとおりの形ではなかった——「<b>${esc(renderFrag(f))}</b>」`,'note');
+      }
+      utter(c,t,'wakare');
+    }
+  });
+
+  const active=S.cast.filter(c=>present(c,t)&&c.talk>0);
+
+  // --- L1: 新しい添状 ---
+  active.forEach(c=>{
+    if(R()<c.talk*dt/26)utter(c,t);
+  });
+  // 常の章は、他人の口からしか流れない(本人は何も言わない)
+  if(t>200&&!S.flags.tsuneDead&&R()<dt/120){
+    const sp=active.filter(c=>c.cite>0);
+    if(sp.length)utter(pick(sp),t,'sara');
+  }
+
+  // --- L2: 引用 ---
+  const alive=S.frags.filter(f=>!f.deadF);
+  active.forEach(c=>{
+    if(c.cite>0&&R()<c.cite*dt/11&&alive.length){
+      // 高H・自分の関心テーマを優先して引用
+      const cands=alive.filter(f=>c.aff.includes(f.theme)||R()<0.25);
+      const pool=cands.length?cands:alive;
+      let best=pool[0],bw=-1;
+      for(let i=0;i<6;i++){const f=pick(pool);const w=f.H+R()*3;if(w>bw){bw=w;best=f;}}
+      cite(c,best,t);
+    }
+  });
+
+  // --- 大鍋の日(年に一度) ---
+  if(day%YEAR===358&&t-S.lastNabe>30){
+    S.lastNabe=t;
+    logEv(1,`大鍋の日。${active.length}人が同じ鍋を囲んだ`,'note');
+    const sp=active.filter(c=>c.cite>0);
+    if(sp.length){
+      if(R()<0.6)utter(pick(sp),t,'matsuri');
+      // 年に一度の共引用: 語られている章の言葉が、まとめて温め直される
+      alive.filter(f=>S.told[f.theme]&&R()<0.4).slice(0,5).forEach(f=>cite(pick(sp),f,t,true));
+      const old=alive.filter(f=>f.theme==='matsuri'&&t-f.born>300).sort((a,b)=>b.H-a.H).slice(0,3);
+      old.forEach(f=>cite(pick(sp),f,t,true));
+      if(old.length&&R()<0.5)logEv(2,`一年ぶりに、去年の大鍋の言葉が引用された。年に一度しか会わない記憶が、毎日の記憶より長生きする`,'note');
+    }
+  }
+
+  // --- 融解 ---
+  const kH=Math.pow(2,-dt/H_HL),kF=Math.pow(2,-dt/180);
+  THEMES.forEach(th=>S.flow[th.id]*=kF);
+  S.frags.forEach(f=>{
+    if(f.deadF)return;
+    f.H*=kH;
+    if(f.H<0.2&&t-f.born>60){
+      f.deadF=true;
+      const author=S.cast.find(c=>c.name===f.author);
+      const lastOf=author&&!present(author,t)&&!S.frags.some(g=>!g.deadF&&g.author===f.author);
+      if(lastOf)logEv(0,`${f.author}の最後の言葉が、今日、物語から融けた——「<s>${esc(renderFrag(f))}</s>」`,'melt');
+      else if(S.told[f.theme]&&R()<0.12)logEv(0,`一文が融けた——「<s>${esc(renderFrag(f)).slice(0,30)}…</s>」。${Math.round(t-f.lastCite)}日間、誰も口にしなかった`,'melt');
+    }
+  });
+
+  // --- L3: 章の全か無か / L4: 段差 ---
+  if(t>=S.nextCompose){
+    S.nextCompose=t+7;
+    const tension={},perTheme={};
+    THEMES.forEach(th=>{tension[th.id]=0;perTheme[th.id]=[];});
+    const authSum={};
+    S.frags.forEach(f=>{if(f.deadF)return;perTheme[f.theme].push(f.H);
+      authSum[f.theme]=authSum[f.theme]||{};authSum[f.theme][f.author]=(authSum[f.theme][f.author]||0)+f.H;});
+    THEMES.forEach(th=>{ // 張力 = 強い順に6文まで(章は無限に太らない)
+      tension[th.id]=perTheme[th.id].sort((a,b)=>b-a).slice(0,6).reduce((a,b)=>a+b,0);});
+    THEMES.forEach(th=>{
+      const T=tension[th.id];
+      if(!S.told[th.id]&&T>=TH_ON){
+        S.told[th.id]=true;
+        logEv(3,`章『${th.label}』が閾値を超え、語りに入った(全か無か)。張力 ${T.toFixed(1)}`,'fire');
+        if(th.id==='sara'&&S.flags.tsuneDead&&!S.flags.saraPost){
+          S.flags.saraPost=true;
+          logEv(4,`観測: 章『皿洗い』は、本人がいなくなってから語られはじめた。物語はいつも、少しだけ遅れて誠実になる`,'issue');
+        }
+      } else if(S.told[th.id]&&T<TH_OFF){
+        S.told[th.id]=false;
+        logEv(3,`章『${th.label}』が語りから脱落した。張力 ${T.toFixed(1)} — 引用が、足りなかった`,'warn');
+        if(S.curIdTheme===th.id)logEv(4,`この店が「何であるか」を支えていた章が、いま消えた`,'issue');
+      }
+      // 一人の肩の上の章
+      if(S.told[th.id]){
+        const as=authSum[th.id],tot=Object.values(as).reduce((a,b)=>a+b,0);
+        for(const name in as){
+          if(as[name]/tot>0.62&&tot>TH_ON*0.7){
+            const key='vuln_'+th.id+'_'+name;
+            if(!S.flags[key]){S.flags[key]=true;
+              pushCand('ひとりの肩の上の章','verm',`章『${th.label}』は、ほとんど${name}の記憶でできている。${name}が来なくなれば、この章ごと消える。`,t);
+            }
+          }
+        }
+      }
+    });
+    // L4: 語られざる章(流れているのに、語りに乗らない)
+    THEMES.forEach(th=>{
+      if(!S.told[th.id]&&S.flow[th.id]>=3.5&&t>300){
+        const key='untold_'+th.id+'_'+Math.floor(t/(YEAR*1.5));
+        if(!S.flags[key]){S.flags[key]=true;
+          pushCand('語られざる章','violet',`『${th.label}』——言葉は流れているのに、語りに乗らない。語り手がいないのか、聞き手がいないのか、それは物語には言えない。`,t);
+          logEv(4,`段差: 章『${th.label}』に言葉は流れている(流量${S.flow[th.id].toFixed(1)})。だが語りには乗っていない`,'issue');
+        }
+      }
+    });
+    // L4: 書き換わった記憶の正典化
+    S.frags.forEach(f=>{
+      if(f.deadF||f.gen<3||f.canonLogged)return;
+      const peers=S.frags.filter(g=>!g.deadF&&g.theme===f.theme);
+      const rank=peers.filter(g=>g.H>f.H).length;
+      const periodKey='canon_'+f.theme+'_'+Math.floor(t/730);
+      if(rank===0&&peers.length>2&&!S.flags[periodKey]){
+        f.canonLogged=true;S.flags[periodKey]=true;
+        pushCand('書き換わった記憶','amber',`いま章『${TH_BY_ID[f.theme].label}』の柱は「${renderFrag(f)}」だ。最初は「${f.orig}」だった。どちらが本当かは、もう引用の数でしか決まらない。`,t);
+        logEv(4,`正典化: 「<b>${esc(renderFrag(f))}</b>」(${f.gen}代目)が章の柱になった。原文「<s>${esc(f.orig)}</s>」を覚えている者は、もういない`,'issue');
+      }
+    });
+    // 店の「何であるか」(最強の章が決める)
+    let top=null,tv=-1;
+    THEMES.forEach(th=>{if(S.told[th.id]&&tension[th.id]>tv){tv=tension[th.id];top=th.id;}});
+    // 時代の交代には、現王朝の張力を25%上回り続けることを要求(揺れ防止)
+    if(top&&S.curIdTheme&&tv<tension[S.curIdTheme]*1.18)top=S.curIdTheme;
+    if(top&&top!==S.curIdTheme){
+      if(S.idPending===top){S.idCount++;
+        if(S.idCount>=14){ // 約100日続いたら時代が変わる
+          if(S.curIdTheme){
+            S.eras.push({t,from:TH_BY_ID[S.curIdTheme].idline,to:TH_BY_ID[top].idline});
+            logEv(4,`時代が変わった。この店は「${TH_BY_ID[S.curIdTheme].idline.replace('ここは、','').replace('である。','')}」ではなく「<b>${TH_BY_ID[top].idline.replace('ここは、','').replace('である。','')}</b>」になった。誰も決めていない`,'issue');
+            if(onEra)onEra();
+          }
+          S.curIdTheme=top;S.idPending=null;
+        }
+      } else {S.idPending=top;S.idCount=1;}
+    } else {S.idPending=null;}
+    if(!S.curIdTheme&&top)S.curIdTheme=top;
+    if(onCompose)onCompose(tension,authSum);
+    if(onCast)onCast();
+  }
+}
+function pushCand(type,cls,body,t){
+  S.cands.unshift({type,cls,body,t});
+  if(S.cands.length>7)S.cands.pop();
+  if(onCand)onCand();
+}
+/*SIM-CORE-END*/
+
+// ===================== UI =====================
+const idEl=document.getElementById('idline'),chEl=document.getElementById('chapters'),
+      erasEl=document.getElementById('eras'),eraList=document.getElementById('eralist'),
+      castEl=document.getElementById('cast'),candsEl=document.getElementById('cands'),
+      logEl=document.getElementById('log'),clockEl=document.getElementById('clock');
+
+onEvent=(t,layer,html,cls)=>{
+  const div=document.createElement('div');
+  div.className='ev '+(cls||'');
+  const ltag=layer===0?'融解':'L'+layer;
+  div.innerHTML='<span class="t">'+fmtT(t)+'</span><span class="lyr l'+layer+'">'+ltag+'</span><span class="x">'+html+'</span>';
+  logEl.prepend(div);
+  while(logEl.children.length>110)logEl.removeChild(logEl.lastChild);
+};
+onCand=()=>{
+  candsEl.innerHTML=S.cands.map(c=>
+    '<div class="icard '+c.cls+'"><span class="itime">'+fmtT(c.t)+'</span><span class="itype">▲ '+c.type+
+    '</span><div class="ibody">'+esc(c.body)+'</div></div>').join('');
+};
+onEra=()=>{
+  erasEl.style.display='block';
+  eraList.innerHTML=S.eras.map(e=>
+    '<div class="era-item"><span class="y">'+fmtT(e.t)+'</span>「<b>'+esc(e.from.replace('ここは、','').replace('である。',''))+
+    '</b>」の店から、「<b>'+esc(e.to.replace('ここは、','').replace('である。',''))+'</b>」の店へ</div>').join('');
+};
+onCast=()=>{
+  castEl.innerHTML=S.cast.map(c=>{
+    const here=present(c,S.t);
+    const cls=c.dead?'dead':(here?'here':(S.t>c.come?'gone':''));
+    const mark=c.dead?' †':'';
+    return '<span class="person '+cls+'">'+c.name+(c.note?'・'+c.note:'')+mark+'</span>';
+  }).join('');
+};
+onCompose=(tension,authSum)=>{
+  clockEl.textContent=fmtT(S.t);
+  idEl.textContent=S.curIdTheme?TH_BY_ID[S.curIdTheme].idline:'ここは、まだ何でもない場所である。';
+  const toldThemes=THEMES.filter(th=>S.told[th.id]).sort((a,b)=>tension[b.id]-tension[a.id]);
+  if(!toldThemes.length){
+    chEl.innerHTML='<div class="nochapter">いま、語りはない。言葉はあるが、章になるほどの引用がない。</div>';
+    return;
+  }
+  let html='';
+  toldThemes.forEach((th,k)=>{
+    // 一人の肩フラグ
+    const as=authSum[th.id]||{};const tot=Object.values(as).reduce((a,b)=>a+b,0)||1;
+    let vuln='';for(const n in as)if(as[n]/tot>0.72)vuln='<span class="vuln">⚠ '+n+'の記憶に依存</span>';
+    html+='<div class="chapter"><div class="ch-head">'+(k+1)+'　'+th.label+vuln+'</div>';
+    const frs=S.frags.filter(f=>!f.deadF&&f.theme===th.id).sort((a,b)=>b.H-a.H).slice(0,4);
+    frs.forEach(f=>{
+      const op=(0.3+0.7*Math.min(1,f.H/HMAX)).toFixed(2);
+      const cited=f.justCited&&S.t-f.justCited<14?' justcited':'';
+      const mut=f.gen>0?'<span class="auth mono">'+f.author+'・'+f.gen+'代目</span>':'<span class="auth mono">'+f.author+'</span>';
+      html+='<div class="sent'+cited+'" style="opacity:'+op+'">'+esc(renderFrag(f))+mut+'</div>';
+    });
+    html+='</div>';
+    // 結線の橋
+    S.bridges.forEach(br=>{
+      if(br.a===th.id&&toldThemes.some(o=>o.id===br.b)){
+        html+='<div class="bridge">——いつからか、'+TH_BY_ID[br.a].label+'の話は、'+TH_BY_ID[br.b].label+'の話と同じ声で語られる。</div>';
+      }
+    });
+  });
+  chEl.innerHTML=html;
+};
+
+// ===================== ループ =====================
+let running=false,speed=1;
+function frame(){
+  if(running){
+    const dt=0.14*speed;
+    const n=Math.ceil(dt/0.5);
+    for(let k=0;k<n;k++)step(dt/n);
+  }
+  requestAnimationFrame(frame);
+}
+reset(Math.floor(Math.random()*1e9));
+onCast();
+requestAnimationFrame(frame);
+
+document.getElementById('btnStart').addEventListener('click',()=>{
+  document.getElementById('intro').style.display='none';
+  running=true;
+  logEv(1,'開店。最初の灯りがついた。ここから先は、誰の筆でもない');
+});
+const btnPause=document.getElementById('btnPause');
+btnPause.addEventListener('click',()=>{running=!running;btnPause.textContent=running?'⏸':'▶';});
+document.querySelectorAll('.spd').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.spd').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');speed=parseFloat(b.dataset.s);
+}));
+document.getElementById('btnNight').addEventListener('click',()=>{
+  reset(Math.floor(Math.random()*1e9));
+  logEl.innerHTML='';candsEl.innerHTML='<div class="empty">まだ何も。物語が育つのを待つ…</div>';
+  eraList.innerHTML='';erasEl.style.display='none';
+  chEl.innerHTML='<div class="nochapter">まだ語りはない。最初の客を待っている。</div>';
+  idEl.textContent='ここは、まだ何でもない場所である。';
+  onCast();
+  logEv(1,'別の店。同じ路地の、別の十五年');
+});
+</script>
+</body>
+</html>
